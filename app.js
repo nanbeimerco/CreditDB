@@ -620,35 +620,50 @@ window.openAnimeModal = function (workId) {
   roleOrder.forEach((roleKey) => {
     const members = work.staff?.[roleKey] || [];
     if (members.length > 0) {
+      const showExpandBtn = members.length > 6;
+      const listId = `creditList_${roleKey}`;
+
+      const membersHtml = members
+        .map((m) => {
+          if (typeof m === "object") {
+            const rtClass = (m.rt || "B").replace("+", "-plus");
+            const ctClass = (m.ct || "B").replace("+", "-plus");
+            return `
+              <div class="staff-credit-item">
+                <span class="staff-tier-pill" title="総合実力Tier: ${m.rt} / 生涯累積Tier: ${m.ct}">
+                  <span class="tier-tag tier-tag-${rtClass}">${m.rt}</span>
+                  <span class="tier-divider">/</span>
+                  <span class="tier-tag tier-tag-${ctClass}">${m.ct}</span>
+                </span>
+                <span class="staff-name-link" onclick="event.stopPropagation(); openStaffModal('${escapeJsStr(m.name)}')">${escapeHtml(m.name)}</span>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="staff-credit-item">
+                <span style="color: #ffffff; font-size: 0.84rem; font-weight: 500;">${escapeHtml(m)}</span>
+              </div>
+            `;
+          }
+        })
+        .join("");
+
+      const expandBtnHtml = showExpandBtn
+        ? `
+          <button type="button" class="btn-credit-expand" onclick="toggleCreditExpand(this, '${listId}')">
+            <span class="expand-icon">▼</span>
+            <span class="expand-text">全て引き出す (${members.length}名)</span>
+          </button>
+        `
+        : "";
+
       staffHtml += `
         <div class="staff-credit-box">
           <div class="staff-role-title">${ROLE_NAMES[roleKey] || roleKey} (${members.length}名)</div>
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            ${members
-              .map((m) => {
-                if (typeof m === "object") {
-                  const rtClass = (m.rt || "B").replace("+", "-plus");
-                  const ctClass = (m.ct || "B").replace("+", "-plus");
-                  return `
-                    <div class="staff-credit-item">
-                      <span class="staff-tier-pill" title="総合実力Tier: ${m.rt} / 生涯累積Tier: ${m.ct}">
-                        <span class="tier-tag tier-tag-${rtClass}">${m.rt}</span>
-                        <span class="tier-divider">/</span>
-                        <span class="tier-tag tier-tag-${ctClass}">${m.ct}</span>
-                      </span>
-                      <span class="staff-name-link" onclick="event.stopPropagation(); openStaffModal('${escapeJsStr(m.name)}')">${escapeHtml(m.name)}</span>
-                    </div>
-                  `;
-                } else {
-                  return `
-                    <div class="staff-credit-item">
-                      <span style="color: #ffffff; font-size: 0.84rem; font-weight: 500;">${escapeHtml(m)}</span>
-                    </div>
-                  `;
-                }
-              })
-              .join("")}
+          <div class="staff-credit-list" id="${listId}" data-count="${members.length}">
+            ${membersHtml}
           </div>
+          ${expandBtnHtml}
         </div>
       `;
     }
@@ -657,6 +672,31 @@ window.openAnimeModal = function (workId) {
   staffGrid.innerHTML = staffHtml || `<div style="color:var(--text-muted); font-size:0.84rem;">制作陣情報なし</div>`;
 
   modal.classList.add("open");
+};
+
+// Toggle Expand/Collapse for Credit Boxes (e.g. Genga with 300+ staff)
+window.toggleCreditExpand = function (btn, listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  const isExpanded = list.classList.toggle("expanded");
+  const count = list.dataset.count || "";
+  const icon = btn.querySelector(".expand-icon");
+  const text = btn.querySelector(".expand-text");
+
+  if (isExpanded) {
+    if (icon) icon.textContent = "▲";
+    if (text) text.textContent = "たたむ";
+    btn.classList.add("expanded");
+  } else {
+    if (icon) icon.textContent = "▼";
+    if (text) text.textContent = `全て引き出す (${count}名)`;
+    btn.classList.remove("expanded");
+    const box = btn.closest(".staff-credit-box");
+    if (box) {
+      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
 };
 
 // Open Staff Detail Modal
