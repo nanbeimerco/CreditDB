@@ -34,11 +34,3 @@
 数分後、`https://<ユーザー名>.github.io/<リポジトリ名>/` にて世界中に無料公開されます。
 
 ---
-
-## 💻 デスクトップアプリ版（.exe）
-
-`creditdb/dist-electron/` フォルダ内に Windows 用の実行ファイルが用意されています：
-- **`CreditDB Setup 1.0.0.exe`**: インストーラー版
-- **`CreditDB 1.0.0.exe`**: インストール不要のポータブル版
-
-※ `AnimeLatentPredict` とは完全に別のアプリ（App ID: `com.creditdb.desktop`）として独立しており、インストールしても相互に上書きや干渉は一切発生しません。
