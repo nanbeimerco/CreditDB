@@ -19,18 +19,3 @@
 4. **月1回の完全自動バックグラウンド更新**:
    - GitHub Actions により、毎月1日にクラウド上で自動的に最新データの収集・再計算・静的ファイル更新が行われます。
 
----
-
-## 🌐 GitHub Pages での公開手順（3ステップ）
-
-1. このリポジトリを GitHub にプッシュします。
-2. GitHub のリポジトリページで **「Settings」**（設定） $\rightarrow$ **「Pages」** を開きます。
-3. **「Build and deployment」** の設定を以下のように指定します：
-   - **Source**: `Deploy from a branch`
-   - **Branch**: `main`（または使用中のブランチ）
-   - **Folder**: `/creditdb/docs`（※ルート公開用リポジトリの場合は `/docs`）
-   - **「Save」** をクリックします。
-
-数分後、`https://<ユーザー名>.github.io/<リポジトリ名>/` にて世界中に無料公開されます。
-
----
