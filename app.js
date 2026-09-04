@@ -622,7 +622,7 @@ window.openAnimeModal = function (workId) {
     if (members.length > 0) {
       staffHtml += `
         <div class="staff-credit-box">
-          <div class="staff-role-title">${ROLE_NAMES[roleKey] || roleKey}</div>
+          <div class="staff-role-title">${ROLE_NAMES[roleKey] || roleKey} (${members.length}名)</div>
           <div style="display: flex; flex-direction: column; gap: 4px;">
             ${members
               .map((m) => {
