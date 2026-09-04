@@ -1,0 +1,10 @@
+{
+  "title": "CreditDB",
+  "version": "1.1.0",
+  "description": "アニメ作品・偏差値・制作陣能力評価 Web図鑑",
+  "total_works": 5452,
+  "total_staff": 22896,
+  "year_min": 1950,
+  "year_max": 2026,
+  "updated_at": "2026-09-04 16:16:20"
+}

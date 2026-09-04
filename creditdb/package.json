@@ -1,0 +1,52 @@
+{
+  "name": "creditdb",
+  "version": "1.2.0",
+  "description": "CreditDB - Anime Works & Staff Evaluation Encyclopedia Desktop App",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "31.0.2",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "electronVersion": "31.0.2",
+    "appId": "com.creditdb.desktop",
+    "productName": "CreditDB",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "docs/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CreditDB"
+    }
+  }
+}
