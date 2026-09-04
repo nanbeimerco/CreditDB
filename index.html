@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CreditDB - アニメ作品・偏差値・制作陣能力評価 Web図鑑</title>
+  <meta name="description" content="全5,400超のアニメ作品の偏差値・AniList素点・Tier、および制作陣（監督・原画・脚本等）のベイジアン総合実力評価・キャリアリーダーボードを網羅したWeb図鑑。">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- MathJax for mathematical formulas -->
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-container">
+      <div class="brand">
+        <h1 class="brand-title">CreditDB</h1>
+        <span class="brand-badge">Web図鑑 v1.2.0</span>
+        <p class="brand-subtitle">アニメ作品・偏差値・制作陣能力評価 ダッシュボード</p>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="tab-works">📊 作品一覧 & 並列比較</button>
+        <button class="nav-tab" data-tab="tab-staff">🏆 制作陣 能力評価 & ランキング</button>
+        <button class="nav-tab" data-tab="tab-guide">📖 指標の見方・ガイド</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="main-container">
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: 作品一覧 & 並列比較 -->
+    <!-- ============================================================ -->
+    <section id="tab-works" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>アニメ作品一覧 & 並列比較</h2>
+            <p class="section-desc">全5,452作品の「偏差値」「AniList素点」「Tier」を網羅。各列をクリックしてソート、作品クリックで詳細クレジット（[実力/累積Tier]付き）を表示。</p>
+          </div>
+          <div class="header-stats" id="worksSummaryStats">
+            <span class="stat-pill">収録作品: <b id="statTotalWorks">5,452</b> 作</span>
+            <span class="stat-pill">対象年代: <b id="statYearRange">1950 - 2026</b></span>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="workSearchInput" class="text-input" placeholder="作品名・制作陣名で瞬時検索... (例: フリーレン, 庵野秀明, 湯浅政明)" autocomplete="off">
+            <button id="workSearchClear" class="btn-clear" title="クリア">×</button>
+          </div>
+
+          <div class="filter-group">
+            <!-- Tier Filter -->
+            <select id="filterTier" class="select-input">
+              <option value="all">全Tier 表示</option>
+              <option value="S+">Tier S+ (偏差値 70以上)</option>
+              <option value="S">Tier S (偏差値 65〜69.9)</option>
+              <option value="A+">Tier A+ (偏差値 60〜64.9)</option>
+              <option value="A">Tier A (偏差値 55〜59.9)</option>
+              <option value="B+">Tier B+ (偏差値 50〜54.9)</option>
+              <option value="B">Tier B (偏差値 45〜49.9)</option>
+              <option value="C">Tier C (偏差値 40〜44.9)</option>
+              <option value="D">Tier D (偏差値 40未満)</option>
+            </select>
+
+            <!-- Year Filter -->
+            <select id="filterYearEra" class="select-input">
+              <option value="all">全年代</option>
+              <option value="2020s">2020年代 (2020〜)</option>
+              <option value="2010s">2010年代 (2010〜2019)</option>
+              <option value="2000s">2000年代 (2000〜2009)</option>
+              <option value="1990s">1990年代 (1990〜1999)</option>
+              <option value="1980s">1980年代以前 (〜1989)</option>
+            </select>
+
+            <!-- Sort Selector -->
+            <select id="sortWorksSelect" class="select-input">
+              <option value="deviation_desc">並替: 偏差値 (高い順)</option>
+              <option value="deviation_asc">並替: 偏差値 (低い順)</option>
+              <option value="raw_desc">並替: AniList素点 (高い順)</option>
+              <option value="raw_asc">並替: AniList素点 (低い順)</option>
+              <option value="year_desc">並替: 公開年 (新しい順)</option>
+              <option value="year_asc">並替: 公開年 (古い順)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Works Table -->
+        <div class="table-wrapper">
+          <table class="data-table" id="worksTable">
+            <thead>
+              <tr>
+                <th style="width: 50px; text-align: center;">順位</th>
+                <th class="sortable" data-sort="title">作品名 <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="year" style="width: 80px; text-align: center;">公開年 <span class="sort-icon">↕</span></th>
+                <th class="sortable active-sort" data-sort="deviation_score" style="width: 110px; text-align: right;">偏差値 <span class="sort-icon">▼</span></th>
+                <th class="sortable" data-sort="anilist_raw_score" style="width: 120px; text-align: right;">AniList素点 <span class="sort-icon">↕</span></th>
+                <th style="width: 90px; text-align: center;">Tier</th>
+                <th>主な制作陣 (監督 / 脚本 / キャラデザ / 作監 / 原画等)</th>
+              </tr>
+            </thead>
+            <tbody id="worksTableBody">
+              <tr>
+                <td colspan="7" class="loading-td">データを読み込み中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-bar">
+          <span id="pageInfo" class="page-info">1 - 50 / 5,452 作品</span>
+          <div class="pagination-buttons">
+            <button id="btnPrevPage" class="btn-page" disabled>◀ 前へ</button>
+            <span id="currentPageNum" class="current-page-num">1</span>
+            <button id="btnNextPage" class="btn-page">次へ ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: 制作陣 能力評価 & ランキング -->
+    <!-- ============================================================ -->
+    <section id="tab-staff" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>制作陣 能力評価 & キャリア・リーダーボード</h2>
+            <p class="section-desc">手掛けた全作品のZスコアから、部門別中央値 $m_{\text{role}}$ に基づくベイズ統計モデルで平滑化した実力スコア $S(a)$ ランキング。</p>
+          </div>
+          <div class="role-pills-container">
+            <div class="role-pill-group" id="rolePillGroup">
+              <button class="role-pill active" data-role="all">全役職</button>
+              <button class="role-pill" data-role="director">監督</button>
+              <button class="role-pill" data-role="series_comp">シリーズ構成/脚本</button>
+              <button class="role-pill" data-role="char_design">キャラクターデザイン</button>
+              <button class="role-pill" data-role="sakkan">作画監督</button>
+              <button class="role-pill" data-role="genga">原画</button>
+              <button class="role-pill" data-role="unit_director">演出/絵コンテ</button>
+              <button class="role-pill" data-role="music">音楽</button>
+              <button class="role-pill" data-role="art_dir">美術監督</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toolbar for Staff -->
+        <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="staffSearchInput" class="text-input" placeholder="スタッフ名で検索... (例: 庵野秀明, 斎藤圭一郎, 井上俊之)" autocomplete="off">
+            <button id="staffSearchClear" class="btn-clear" title="クリア">×</button>
+          </div>
+
+          <div class="filter-group">
+            <select id="sortStaffSelect" class="select-input">
+              <option value="rating">並替: 総合実力 S(a) 順</option>
+              <option value="cumulative">並替: 生涯累積実績 ΣZ 順</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="table-wrapper">
+          <table class="data-table" id="leaderboardTable">
+            <thead>
+              <tr>
+                <th style="width: 60px; text-align: center;">順位</th>
+                <th>スタッフ名</th>
+                <th style="width: 80px; text-align: center;">Tier</th>
+                <th style="width: 100px; text-align: center;">参加作品数</th>
+                <th style="width: 140px; text-align: right;">総合実力 S(a)</th>
+                <th style="width: 150px; text-align: right;">生涯累積実績 ΣZ</th>
+                <th>最高評価 代表作 (公開年 / Z値)</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardTableBody">
+              <tr>
+                <td colspan="7" class="loading-td">リーダーボードを読み込み中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Staff Pagination Controls -->
+        <div class="pagination-bar" id="staffPaginationBar">
+          <span id="staffPageInfo" class="page-info">1 - 50 / 22,896 名</span>
+          <div class="pagination-buttons">
+            <button id="btnPrevStaffPage" class="btn-page" disabled>◀ 前へ</button>
+            <span id="currentStaffPageNum" class="current-page-num">1</span>
+            <button id="btnNextStaffPage" class="btn-page">次へ ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: 指標の見方・ガイド -->
+    <!-- ============================================================ -->
+    <section id="tab-guide" class="tab-pane">
+      <div class="card guide-container">
+        <div class="card-header">
+          <div>
+            <h2>📖 指標の見方・ガイド</h2>
+            <p class="section-desc">CreditDB に掲載されているアニメ作品の評価指標（偏差値・素点・Tier）、年代補正Z値、および制作陣の実力評価指標（総合実力・生涯累積実績・部門別Tier）の数理統計的背景を解説します。</p>
+          </div>
+        </div>
+
+        <!-- Section 1: 作品評価指標 -->
+        <div class="guide-section">
+          <h3 class="guide-section-title">1. アニメ作品の評価指標について</h3>
+          <p class="guide-text">
+            CreditDB では、誰でも直感的に作品の評価を把握できるよう、公開指標を **「偏差値」「AniList素点」「Tier」** の3点に厳選して表示しています。
+          </p>
+
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h4 class="guide-card-title">📊 偏差値（年代相対クオリティ）</h4>
+              <p class="guide-card-desc">
+                **「その作品が公開された年代のアニメ群の中で、どれだけ突出して評価されたか」** を、統計的な標準偏差単位で算出し、平均を 50.0、標準偏差を 10.0 に規格化した指標です。
+              </p>
+              <div class="guide-formula">偏差値 = 50.0 + 10.0 × Z_i</div>
+              <p class="guide-card-sub">
+                ※ $Z_i$（年代補正Z値）により、年代ごとのインフレ・デフレが完全に補正されているため、1980年代の名作も2020年代の話題作も公平に横並び比較できます。
+              </p>
+            </div>
+
+            <div class="guide-card">
+              <h4 class="guide-card-title">🌐 AniList素点（全世界レビュー実績）</h4>
+              <p class="guide-card-desc">
+                全世界のアニメデータベース **AniList** に投稿されたユーザーレビューの加重平均点（100点満点）です。
+              </p>
+              <p class="guide-card-sub">
+                素点は世界的な人気や熱量を直接反映するメリットがありますが、年代が新しい作品ほど投票人口の増加により高得点化（インフレ）しやすい性質があります。時代背景を超えた真の実力比較には「偏差値」をご参照ください。
+              </p>
+            </div>
+          </div>
+
+          <h4 style="margin-top: 1.5rem; margin-bottom: 0.8rem; color: #fff;">🏆 作品 Tier（品質階層）の判定基準</h4>
+          <p class="guide-text">
+            全5,452作品の偏差値に基づき、客観的なパーセンタイル（上位何%か）によって以下の階層に分類しています。
+          </p>
+
+          <div class="table-wrapper" style="margin-top: 0.8rem;">
+            <table class="data-table" style="font-size: 0.88rem;">
+              <thead>
+                <tr>
+                  <th style="width: 100px; text-align: center;">Tier</th>
+                  <th style="width: 130px; text-align: right;">偏差値 基準</th>
+                  <th style="width: 120px; text-align: right;">上位パーセンタイル</th>
+                  <th>位置づけ・解釈</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-S-plus">Tier S+</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #fbbf24;">70.0 以上</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">上位 約 2.3% 以内</td>
+                  <td>同年代の全アニメの中で極めて突出した、歴史的メガヒット・超名作水準。</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-S">Tier S</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #34d399;">65.0 〜 69.9</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">上位 約 6.7% 以内</td>
+                  <td>その時代を代表する大傑作。高いクオリティと広範な支持を獲得した作品。</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-A-plus">Tier A+</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">60.0 〜 64.9</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">上位 約 15.9% 以内</td>
+                  <td>同年代の上位15%に位置する、確かな完成度と魅力を誇る秀作。</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-A">Tier A</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">55.0 〜 59.9</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">上位 約 30.9% 以内</td>
+                  <td>平均を明確に上回り、ファン層から根強く支持される良作水準。</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-B-plus">Tier B+</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #94a3b8;">50.0 〜 54.9</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">平均〜上位 50%</td>
+                  <td>年代の平均水準以上を堅実に維持している安定作。</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-B">Tier B</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #94a3b8;">45.0 〜 49.9</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">平均的ボリュームゾーン</td>
+                  <td>標準的な評価帯。</td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;"><span class="tier-badge tier-C">Tier C / D</span></td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #64748b;">45.0 未満</td>
+                  <td style="text-align: right; font-family: 'JetBrains Mono', monospace;">下位 30% 未満</td>
+                  <td>同年代の平均的な評価を下回った作品群。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 2: 年代補正Z値について (新設) -->
+        <div class="guide-section" style="margin-top: 2.5rem;">
+          <h3 class="guide-section-title">2. 年代補正Z値（$Z_i$）について</h3>
+          <p class="guide-text">
+            **年代補正Z値（局所Zスコア $Z_i$）** は、ユーザーごとの採点バイアス（甘口・辛口傾向）と、年代ごとの評価相場（投票人口差によるインフレ・デフレ）を二段階で数理的に除去した、作品の根源的なクオリティ指標です。
+          </p>
+
+          <div class="guide-grid">
+            <div class="guide-card" style="grid-column: 1 / -1;">
+              <h4 class="guide-card-title">📐 二段階の数理的補正プロセス</h4>
+              <p class="guide-card-desc" style="margin-bottom: 0.6rem;">
+                <b>第1段階（ユーザー採点バイアスの除去）:</b><br>
+                レビュー $R_{ui} = \mu + b_u + b_i + \epsilon_{ui}$ の交互最小二乗法（ALS行列分解）を解き、ユーザー特有の甘口・辛口バイアス $b_u$ を除外して、作品の素の実力バイアス $b_i$ を算出します。
+              </p>
+              <p class="guide-card-desc" style="margin-bottom: 0.6rem;">
+                <b>第2段階（年代移動窓による局所標準化）:</b><br>
+                作品 $i$ の公開年 $t(i)$ を中心とする前後3年間（計7年間）の移動窓において、作品群の平均 $\mu_{\text{year}}$ と標準偏差 $\sigma_{\text{year}}$ を計算し、Zスコア化します：
+              </p>
+              <div class="guide-formula">Z_i = \frac{b_i - \mu_{\text{year}}}{\sigma_{\text{year}}}</div>
+              <p class="guide-card-sub">
+                これにより、全年代の作品が「平均 0.0、標準偏差 1.0」の共通尺度に規格化されます。$Z_i = 0$ はその年代の平均値、$Z_i = +1.0$ は上位約15.9%、$Z_i = +2.0$ は上位約2.3%を意味します。この $Z_i$ を 10倍して 50 を加えたものが **偏差値（$50 + 10 \times Z_i$）** です。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 制作陣評価指標 -->
+        <div class="guide-section" style="margin-top: 2.5rem;">
+          <h3 class="guide-section-title">3. アニメーター・制作陣の能力評価指標について</h3>
+          <p class="guide-text">
+            制作陣の評価では、参加作品数の多寡による過大・過小ブレを排除し、手掛けた作品群の実績から客観的な統計実力を推定しています。
+          </p>
+
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h4 class="guide-card-title">🎯 総合実力 S(a)（ベイジアン平均評価値）</h4>
+              <p class="guide-card-desc">
+                各スタッフがこれまでに手掛けた参加作品の年代補正Zスコアを、部門別の参加作品数中央値 $m_{\text{role}}$ に基づくベイズ統計モデルで平滑化した指標です。
+              </p>
+              <div class="guide-formula">S(a) = \frac{\sum Z}{|P| + m_{\text{role}}}</div>
+              <p class="guide-card-sub">
+                参加作品数 $|P|$ が極端に少ないスタッフが、たまたま1作のヒットによってランキング最上位を独占してしまう現象を防ぐため、事後分布の期待値として手堅く算出されます。
+              </p>
+            </div>
+
+            <div class="guide-card">
+              <h4 class="guide-card-title">🏛️ 生涯累積実績 ΣZ（全作品通算貢献値）</h4>
+              <p class="guide-card-desc">
+                これまでに携わった全作品の年代補正Zスコアを単純合算した累積値です。
+              </p>
+              <div class="guide-formula">\Sigma Z = \sum_{p \in P} Z_p</div>
+              <p class="guide-card-sub">
+                長年のキャリアにわたり多数の良作・名作を支え続け、アニメーション産業全体にどれだけのクオリティ実績を積み上げてきたかという通算貢献量の総量を示します。
+              </p>
+            </div>
+          </div>
+
+          <h4 style="margin-top: 1.5rem; margin-bottom: 0.8rem; color: #fff;">🏷️ クレジット表記における `[実力Tier / 累積Tier]` の見方</h4>
+          <p class="guide-text">
+            作品詳細モーダルの制作陣一覧では、各スタッフ名の前に <b>`[総合実力Tier / 生涯累積実績Tier]`</b> を並べて表示しています（例: <code>[S+ / S]</code>）。
+          </p>
+          <ul class="guide-text" style="padding-left: 1.5rem; margin-top: 0.4rem; line-height: 1.8;">
+            <li><b>左側（総合実力Tier）</b>: その役職（監督、原画等）として発揮される平均的なクオリティ水準の高さを示します。</li>
+            <li><b>右側（生涯累積実績Tier）</b>: その役職としてキャリア全体で業界に積み上げてきた通算貢献量の総量を示します。</li>
+            <li>（例: <code>[S+ / S+]</code> はその部門の歴史的トップクリエイター、<code>[S+ / B]</code> は新進気鋭の超実力派、<code>[A / S+]</code> は長年現場を支え続ける名匠原画を表します）</li>
+          </ul>
+
+          <h4 style="margin-top: 1.5rem; margin-bottom: 0.8rem; color: #fff;">⚖️ 部門別平滑化パラメータ $m_{\text{role}}$（中央値）の設計</h4>
+          <p class="guide-text">
+            役職ごとに1作品を制作する際の作業負荷や年間参加可能本数は大きく異なります。全5,452作品の実績データから各部門の参加作品数中央値を求め、平滑化定数 $m_{\text{role}}$ として適用しています：
+          </p>
+
+          <div class="table-wrapper" style="margin-top: 0.8rem;">
+            <table class="data-table" style="font-size: 0.88rem;">
+              <thead>
+                <tr>
+                  <th>部門（役職）</th>
+                  <th style="text-align: center; width: 140px;">参加数 中央値 ($m_{\text{role}}$)</th>
+                  <th>数理統計上の意義</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>監督 (`director`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">2.0</td>
+                  <td>1作あたりの責任負荷が極めて大きいため、少作品数から実力を高感度に反映。</td>
+                </tr>
+                <tr>
+                  <td><b>シリーズ構成 / 脚本 (`series_comp`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">2.0</td>
+                  <td>物語統括としての影響度を少本数から反映。</td>
+                </tr>
+                <tr>
+                  <td><b>キャラクターデザイン (`char_design`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">2.0</td>
+                  <td>ビジュアル総括の実績を反映。</td>
+                </tr>
+                <tr>
+                  <td><b>音楽 (`music`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8;">2.0</td>
+                  <td>劇伴作曲家としての作風・実績を高感度に評価。</td>
+                </tr>
+                <tr>
+                  <td><b>作画監督 (`sakkan`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #34d399;">4.0</td>
+                  <td>各話・総作監の実績に基づき適度に平滑化。</td>
+                </tr>
+                <tr>
+                  <td><b>演出 / 絵コンテ (`unit_director`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #34d399;">4.0</td>
+                  <td>各話演出としての実績を適度に平滑化。</td>
+                </tr>
+                <tr>
+                  <td><b>美術監督 (`art_dir`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #34d399;">4.0</td>
+                  <td>背景・世界観統括としての実績を適度に平滑化。</td>
+                </tr>
+                <tr>
+                  <td><b>原画 (`genga`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #fbbf24;">6.0</td>
+                  <td>参加作品数が多いため、ブレを抑えて手堅く実力を推定。</td>
+                </tr>
+                <tr>
+                  <td><b>スタッフ全体総合 (`all`)</b></td>
+                  <td style="text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #fbbf24;">6.0</td>
+                  <td>全役職通算の総合実力 $S(a)$ の平滑化基準値。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: 作品詳細モーダル -->
+  <!-- ============================================================ -->
+  <div id="animeModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalAnimeTitle" class="modal-title">作品タイトル</h2>
+          <p id="modalAnimeSub" class="modal-subtitle">2023年 / 英語タイトル</p>
+        </div>
+        <button id="modalAnimeClose" class="modal-close-btn" title="閉じる">×</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 3 Summary Cards: 偏差値, AniList素点, Tier -->
+        <div class="modal-metrics-grid">
+          <!-- Card 1: 偏差値 -->
+          <div class="metric-card metric-card-deviation">
+            <span class="metric-card-label">📊 偏差値 (年代相対クオリティ)</span>
+            <div class="metric-card-val-row">
+              <span id="modalAnimeDeviation" class="metric-main-num">79.9</span>
+            </div>
+            <div id="modalAnimeDevRank" class="metric-card-sub">🏆 年代補正順位: 第 #1 位 / 5,452 作品</div>
+            <div id="modalAnimeDevTier" class="metric-badge-container">
+              <span class="tier-badge tier-S-plus">Tier S+</span>
+              <span class="percentile-text">上位 0.02%</span>
+            </div>
+          </div>
+
+          <!-- Card 2: AniList素点 -->
+          <div class="metric-card">
+            <span class="metric-card-label">🌐 AniList 素点 (全世界実績)</span>
+            <div class="metric-card-val-row">
+              <span id="modalAnimeRawScore" class="metric-main-num">88.0点</span>
+            </div>
+            <div id="modalAnimeRawRank" class="metric-card-sub">素点順位: 第 #26 位 / 5,452 作品</div>
+            <div class="metric-card-note">全世界ユーザー評価平均</div>
+          </div>
+
+          <!-- Card 3: Tier 概要 -->
+          <div class="metric-card">
+            <span class="metric-card-label">🏆 判定 Tier</span>
+            <div class="metric-card-val-row" style="margin-top: 0.3rem;">
+              <span id="modalAnimeTierBadge" class="tier-badge tier-S-plus" style="font-size: 1.1rem; padding: 0.3rem 0.8rem;">Tier S+</span>
+            </div>
+            <p id="modalAnimeTierDesc" class="metric-tier-desc">同年代の中で極めて突出した、歴史的メガヒット・超名作水準。</p>
+          </div>
+        </div>
+
+        <!-- Staff Credits Section -->
+        <div class="modal-staff-section">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 0.6rem; border-bottom: 1px solid var(--border-hairline); padding-bottom: 0.4rem;">
+            <h3 class="modal-section-title" style="border:none; margin:0; padding:0;">制作陣クレジット</h3>
+            <span style="font-size: 0.74rem; color: var(--text-muted);">人名前表記: <code>[総合実力Tier / 生涯累積Tier]</code></span>
+          </div>
+          <div id="modalAnimeStaffGrid" class="modal-staff-grid">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODAL: スタッフ詳細能力プロファイルモーダル (2大指標集約版) -->
+  <!-- ============================================================ -->
+  <div id="staffModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalStaffName" class="modal-title">スタッフ名</h2>
+          <p id="modalStaffRole" class="modal-subtitle">主役職 / 参加作品数</p>
+        </div>
+        <button id="modalStaffClose" class="modal-close-btn" title="閉じる">×</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Summary Stats Grid (2 Cards: 総合実力, 生涯累積実績) -->
+        <div class="modal-staff-summary-grid">
+          <!-- Card 1: 総合実力 S(a) -->
+          <div class="metric-card">
+            <span class="metric-card-label">🎯 総合実力 S(a)（ベイジアン平均評価値）</span>
+            <div style="display: flex; align-items: baseline; gap: 0.8rem; margin: 0.2rem 0;">
+              <span id="modalStaffRating" class="metric-main-num" style="color: var(--color-cyan);">1.079</span>
+              <span id="modalStaffRatingTierBadge" class="tier-badge tier-S-plus">Tier S+</span>
+            </div>
+            <div id="modalStaffRank" class="metric-card-sub">全スタッフ中 第 #4 位 / 22,896 名</div>
+          </div>
+
+          <!-- Card 2: 生涯累積実績 ΣZ -->
+          <div class="metric-card">
+            <span class="metric-card-label">🏛️ 生涯累積実績 ΣZ（全作品通算貢献値）</span>
+            <div style="display: flex; align-items: baseline; gap: 0.8rem; margin: 0.2rem 0;">
+              <span id="modalStaffCumZ" class="metric-main-num" style="color: var(--color-green);">+37.90</span>
+              <span id="modalStaffCumTierBadge" class="tier-badge tier-S-plus">Tier S+</span>
+            </div>
+            <div id="modalStaffCumRank" class="metric-card-sub">通算貢献順: 第 #12 位 / 22,896 名</div>
+          </div>
+        </div>
+
+        <!-- Department Ranks Cards -->
+        <div class="modal-dept-section" style="margin-top: 1.5rem;">
+          <h3 class="modal-section-title">部門別実績 & Tier</h3>
+          <div id="modalStaffDeptGrid" class="modal-dept-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Career Timeline & Best Works -->
+        <div class="modal-timeline-section" style="margin-top: 1.5rem;">
+          <h3 class="modal-section-title">キャリア参加作品 年表タイムライン</h3>
+          <div class="timeline-wrapper">
+            <table class="data-table" style="font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th style="width: 70px; text-align: center;">公開年</th>
+                  <th>参加作品名</th>
+                  <th style="width: 120px;">担当役職</th>
+                  <th style="width: 90px; text-align: right;">年代補正 Z値</th>
+                </tr>
+              </thead>
+              <tbody id="modalStaffTimelineBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <p>CreditDB © 2026. Powered by Bayesian Quality Decomposition Model. Data sourced from AniList & Bangumi.</p>
+    </div>
+  </footer>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
