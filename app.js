@@ -620,7 +620,7 @@ window.openAnimeModal = function (workId) {
   roleOrder.forEach((roleKey) => {
     const members = work.staff?.[roleKey] || [];
     if (members.length > 0) {
-      const showExpandBtn = members.length > 6;
+      const showExpandBtn = members.length > 8;
       const listId = `creditList_${roleKey}`;
 
       const membersHtml = members
@@ -679,7 +679,12 @@ window.toggleCreditExpand = function (btn, listId) {
   const list = document.getElementById(listId);
   if (!list) return;
 
+  const box = list.closest(".staff-credit-box");
   const isExpanded = list.classList.toggle("expanded");
+  if (box) {
+    box.classList.toggle("expanded", isExpanded);
+  }
+
   const count = list.dataset.count || "";
   const icon = btn.querySelector(".expand-icon");
   const text = btn.querySelector(".expand-text");
@@ -692,7 +697,6 @@ window.toggleCreditExpand = function (btn, listId) {
     if (icon) icon.textContent = "▼";
     if (text) text.textContent = `全て引き出す (${count}名)`;
     btn.classList.remove("expanded");
-    const box = btn.closest(".staff-credit-box");
     if (box) {
       box.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
