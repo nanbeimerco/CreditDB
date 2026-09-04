@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アニメ潜在クオリティ予測 & 制作陣能力評価システム</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css?v=20260904_05">
+  <style>
+    html, body, select, input, textarea {
+      color-scheme: dark;
+    }
+    body {
+      background-color: #000000 !important;
+      color: #ffffff !important;
+    }
+    /* Critical enforcement for dropdowns to eliminate white-on-white text */
+    select {
+      background-color: #14141a !important;
+      color: #ffffff !important;
+    }
+    select option, select optgroup {
+      background-color: #14141a !important;
+      color: #ffffff !important;
+      padding: 6px 10px !important;
+    }
+    .nav-tabs {
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      width: 100% !important;
+      text-align: center !important;
+      margin: 0 auto !important;
+    }
+    .tabs-container {
+      display: inline-flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      margin: 0 auto !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header (Slim & Compact) -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-area">
+        <h1 class="logo-title">AnimeLatent<span class="highlight">Predict</span></h1>
+        <span class="logo-subtitle">制作陣メタデータ潜在クオリティ予測 & AniList比較</span>
+      </div>
+      <div class="metrics-bar" id="metricsBar">
+        <div class="metric-chip"><span class="chip-label">モデル:</span> <span class="chip-val" id="chipModel">GBDT (LightGBM)</span></div>
+        <div class="metric-chip"><span class="chip-label">作品:</span> <span class="chip-val" id="chipWorks">--</span></div>
+        <div class="metric-chip"><span class="chip-label">RMSE:</span> <span class="chip-val" id="chipRmse">--</span></div>
+        <div class="metric-chip"><span class="chip-label">相関 r:</span> <span class="chip-val" id="chipPearson">--</span></div>
+        <button id="btnBulkCollect" class="btn btn-primary" style="padding:0.25rem 0.75rem; font-size:0.75rem; width:auto; border-radius:9999px;">
+          <span>📥 Bangumi一括収集</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Instant Search Bar (Clean without icon/shortcut) -->
+  <div class="search-banner">
+    <div class="search-banner-inner">
+      <div class="search-input-wrap">
+        <input type="text" id="globalSearchInput" placeholder="アニメタイトル または 制作陣（監督、原画、音楽、美術、スタジオ等）を検索..." autocomplete="off">
+        <div class="search-dropdown" id="searchDropdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs (Strictly Centered) -->
+  <nav class="nav-tabs" style="display:flex !important; justify-content:center !important; align-items:center !important; width:100% !important; text-align:center !important; margin:0 auto !important;">
+    <div class="tabs-container" style="display:inline-flex !important; justify-content:center !important; align-items:center !important; margin:0 auto !important;">
+      <button class="tab-btn active" data-tab="tab-predict">🎯 作品予測 & SHAP主因分析</button>
+      <button class="tab-btn" data-tab="tab-compare">📊 AniList並列比較テーブル</button>
+      <button class="tab-btn" data-tab="tab-staff">🏆 スタッフ能力評価 & リーダーボード</button>
+      <button class="tab-btn" data-tab="tab-guide">📖 モデル解説 & 指標の見方</button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- TAB 1: PREDICT & SHAP -->
+    <section id="tab-predict" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🎯 制作陣メタデータからの潜在クオリティ (Zスコア) 予測 & 要因分析</h2>
+          <p class="card-subtitle">
+            過去の実績から、その制作陣（監督・原画・脚本・スタジオ等）が集結した場合に期待されるクオリティをGBDTモデルが予測します。
+          </p>
+        </div>
+
+        <div class="predict-layout">
+          <!-- Input Form -->
+          <form id="predictForm" class="predict-form">
+            <div class="form-group full-width">
+              <label for="selectPreset">⚡ 有名作品のプリセットから自動入力 (テスト用)</label>
+              <select id="selectPreset" class="select-input">
+                <option value="">-- プリセットを選択してください --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="inputTitle">作品名 (任意)</label>
+              <input type="text" id="inputTitle" placeholder="例: 劇場版新作アニメ" value="新作プロジェクト">
+            </div>
+            <div class="form-group">
+              <label for="inputYear">公開年</label>
+              <input type="number" id="inputYear" value="2024" min="1970" max="2030">
+            </div>
+            <div class="form-group">
+              <label for="inputDirector">🎬 監督</label>
+              <input type="text" id="inputDirector" placeholder="例: 庵野秀明, 湯浅政明, 新海誠">
+            </div>
+            <div class="form-group">
+              <label for="inputSeriesComp">📝 シリーズ構成 / 脚本</label>
+              <input type="text" id="inputSeriesComp" placeholder="例: 岡田麿里, 花田十輝, 虚淵玄">
+            </div>
+            <div class="form-group">
+              <label for="inputCharDesign">🎨 キャラクターデザイン</label>
+              <input type="text" id="inputCharDesign" placeholder="例: 貞本義行, 吉成曜, キャラデザ担当者">
+            </div>
+            <div class="form-group">
+              <label for="inputStudio">🏢 制作スタジオ</label>
+              <input type="text" id="inputStudio" placeholder="例: 京都アニメーション, MAPPA, ufotable">
+            </div>
+            <div class="form-group">
+              <label for="inputUnitDirector">演出 / 副監督</label>
+              <input type="text" id="inputUnitDirector" placeholder="例: 鶴巻和哉, 今石洋之">
+            </div>
+            <div class="form-group">
+              <label for="inputSakkan">✏️ 作画監督</label>
+              <input type="text" id="inputSakkan" placeholder="例: 本田雄, 井上俊之">
+            </div>
+            <div class="form-group">
+              <label for="inputMusic">🎵 音楽 (劇伴作曲家)</label>
+              <input type="text" id="inputMusic" placeholder="例: 澤野弘之, 鷺巣詩郎, 牛尾憲輔">
+            </div>
+            <div class="form-group">
+              <label for="inputArtDir">🖼️ 美術監督 (背景美術)</label>
+              <input type="text" id="inputArtDir" placeholder="例: 男鹿和雄, 小倉宏昌, 高木佐和子">
+            </div>
+            <div class="form-group full-width">
+              <label for="inputGenga">原画 (クレジット順にカンマ区切りで入力: w = 1/√r)</label>
+              <textarea id="inputGenga" rows="3" placeholder="例: 榎本柊斗, 松本憲生, 村上泉, 田口愛梨"></textarea>
+              <small class="helper-text">※ 最初に書かれた原画ほどクレジット順位1位、2位…として高寄与度で加重計算されます。</small>
+            </div>
+            <div class="form-actions full-width">
+              <button type="submit" class="btn btn-primary" id="btnPredict">
+                <span>⚡ 潜在クオリティを予測 & SHAP分析</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Output Result & SHAP Waterfall -->
+        <div class="card result-card">
+          <div class="card-header">
+            <h2>予測結果 & SHAP寄与度要因分析</h2>
+            <span class="badge" id="badgeResultStatus">待機中</span>
+          </div>
+
+          <div id="resultOutput" class="result-body">
+            <div class="score-summary-grid">
+              <div class="summary-box">
+                <span class="box-label">予測 潜在クオリティ (Zスコア)</span>
+                <span class="box-val highlight-val" id="valPredZ">+0.00</span>
+                <span class="box-sub">同年代競合平均からの偏差値</span>
+              </div>
+              <div class="summary-box">
+                <span class="box-label">AniList 換算予測スコア</span>
+                <span class="box-val" id="valPredScore">00.0</span>
+                <div id="valPredTier" style="margin-top:0.3rem; min-height:22px;"></div>
+                <span class="box-sub">100点満点スケール (バイアス復元)</span>
+              </div>
+              <div class="summary-box">
+                <span class="box-label">基準平均値 (Base E[Z])</span>
+                <span class="box-val" id="valBaseZ">+0.00</span>
+                <span class="box-sub">全スタッフの事前期待値</span>
+              </div>
+            </div>
+
+            <!-- SHAP Chart -->
+            <div class="chart-container">
+              <h3 class="chart-title">TreeSHAP 各スタッフ特徴量の寄与度 (+押し上げ / -押し下げ)</h3>
+              <div class="chart-canvas-wrapper">
+                <canvas id="shapChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Factor bullets -->
+            <div class="factors-grid">
+              <div class="factor-col positive-factors">
+                <h4>🟢 主な押し上げ要因 (Positive)</h4>
+                <ul id="listPosFactors" class="factor-list"></ul>
+              </div>
+              <div class="factor-col negative-factors">
+                <h4>🔴 主な押し下げ/抑制要因 (Negative)</h4>
+                <ul id="listNegFactors" class="factor-list"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Side-by-side AniList Comparison -->
+    <section id="tab-compare" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>AniList素点 vs バイアス補正値 vs GBDT予測値 並列比較</h2>
+            <p class="section-desc">
+              一般レビューの「レビュアー甘口辛口バイアス $b_u$」を除去した作品実力値 $b_i$、および「公開年代の技術・流行水準」を標準化した $Z_i$ とモデル予測値 $\hat{Z}_i$ の対比一覧です。
+            </p>
+          </div>
+          <div class="table-controls">
+            <input type="text" id="filterCompareTitle" placeholder="タイトル絞り込み..." class="search-input">
+            <select id="filterCompareVerdict" class="select-input">
+              <option value="all">全判定</option>
+              <option value="サプライズ名作">サプライズ名作 (期待値以上)</option>
+              <option value="概ねスタッフ前評判通り">概ねスタッフ前評判通り</option>
+              <option value="期待外れ">期待外れ (ポテンシャル未達)</option>
+            </select>
+            <select id="filterCompareSort" class="select-input" title="並び替え順">
+              <option value="deviation_score_desc">並替: 偏差値 (高い順)</option>
+              <option value="deviation_score_asc">並替: 偏差値 (低い順)</option>
+              <option value="residual_desc">並替: 乖離 (サプライズ順)</option>
+              <option value="residual_asc">並替: 乖離 (期待外れ順)</option>
+              <option value="predicted_score_desc">並替: 🎯 予測換算点 (高い順)</option>
+              <option value="predicted_score_asc">並替: 🎯 予測換算点 (低い順)</option>
+              <option value="anilist_raw_score_desc">並替: AniList素点 (高い順)</option>
+              <option value="anilist_raw_score_asc">並替: AniList素点 (低い順)</option>
+              <option value="true_z_score_desc">並替: 年代補正真値 Z (高い順)</option>
+              <option value="true_z_score_asc">並替: 年代補正真値 Z (低い順)</option>
+              <option value="year_desc">並替: 公開年 (新しい順)</option>
+              <option value="year_asc">並替: 公開年 (古い順)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="compareTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="title">タイトル <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="year">公開年 <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="deviation_score">偏差値 <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="anilist_raw_score">AniList素点 <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="debiased_b_i">補正実力 ($b_i$) <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="true_z_score">真値 ($Z_i$) <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="predicted_z_score">予測値 ($\hat{Z}_i$) <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="predicted_score">🎯 予測換算点 <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="residual">乖離 (残差) <span class="sort-icon">↕</span></th>
+                <th>総合判定</th>
+                <th>最大寄与要因</th>
+              </tr>
+            </thead>
+            <tbody id="compareTableBody">
+              <tr><td colspan="11" class="loading-cell">データを読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-controls" id="comparePagination">
+          <span id="comparePageInfo">全 0 件中 0〜0 件を表示</span>
+          <div class="pagination-btns">
+            <button type="button" class="btn-page" id="btnComparePrev" disabled>◀ 前の30件</button>
+            <button type="button" class="btn-page" id="btnCompareNext">次の30件 ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Staff Capability & Leaderboard -->
+    <section id="tab-staff" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>制作陣 能力評価 & キャリア・リーダーボード</h2>
+            <p class="section-desc">各スタッフの過去全参加作品の $Z$ スコアから、部門別中央値 $m_{\text{role}}$ に基づくベイジアン平滑化スコア $S(a) = \frac{\sum Z}{|P|+m_{\text{role}}}$ を算出し実力を評価。</p>
+          </div>
+          <div class="table-controls" style="flex-wrap:wrap; gap:0.8rem;">
+            <div class="role-pill-group" id="rolePillGroup">
+              <button class="role-pill active" data-role="all">全役職</button>
+              <button class="role-pill" data-role="director">監督</button>
+              <button class="role-pill" data-role="series_comp">シリーズ構成/脚本</button>
+              <button class="role-pill" data-role="char_design">キャラクターデザイン</button>
+              <button class="role-pill" data-role="sakkan">作画監督</button>
+              <button class="role-pill" data-role="genga">原画</button>
+              <button class="role-pill" data-role="unit_director">演出/絵コンテ</button>
+              <button class="role-pill" data-role="music">🎵 音楽</button>
+              <button class="role-pill" data-role="art_dir">🖼️ 美術監督</button>
+            </div>
+            <select id="staffSortOrder" class="select-input" title="並び替え順">
+              <option value="rating">総合実力 S(a) 順</option>
+              <option value="cumulative">生涯累積実績 ΣZ 順</option>
+            </select>
+            <input type="text" id="searchStaffInput" placeholder="スタッフ名で検索..." class="search-input">
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="staffTable">
+            <thead>
+              <tr>
+                <th>順位</th>
+                <th>スタッフ名</th>
+                <th>役職</th>
+                <th>参加作品数</th>
+                <th>🏛️ 生涯通算実績 ΣZ</th>
+                <th>🎯 総合実力 S(a)</th>
+                <th>平均実績 Mean(Z)</th>
+                <th>最高実績 Peak(Z)</th>
+                <th>キャリアハイ代表作</th>
+                <th>詳細</th>
+              </tr>
+            </thead>
+            <tbody id="staffTableBody">
+              <tr><td colspan="10" class="loading-cell">データを読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-controls" id="staffPagination">
+          <span id="staffPageInfo">全 0 件中 0〜0 件を表示</span>
+          <div class="pagination-btns">
+            <button type="button" class="btn-page" id="btnStaffPrev" disabled>◀ 前の30件</button>
+            <button type="button" class="btn-page" id="btnStaffNext">次の30件 ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Staff Detail Modal -->
+  <div class="modal-overlay" id="staffModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalStaffName">スタッフ名</h3>
+        <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalStaffContent">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Anime Detail Modal -->
+  <div class="modal-overlay" id="animeModal">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modalAnimeTitle">アニメ作品詳細</h3>
+          <span class="modal-subtitle" id="modalAnimeSub" style="font-size:0.8rem; color:var(--text-secondary);"></span>
+        </div>
+        <button class="modal-close-btn" id="modalAnimeCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalAnimeContent">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=20260904_06"></script>
+</body>
+</html>
